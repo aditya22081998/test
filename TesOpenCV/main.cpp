@@ -21,7 +21,7 @@ static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
     double dy1 = pt1.y - pt0.y;
     double dx2 = pt2.x - pt0.x;
     double dy2 = pt2.y - pt0.y;
-    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2) + 1e-10);
+    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
 }
 
 static double distance(cv::Point pt1, cv::Point pt2, cv::Point pt0)
@@ -45,34 +45,15 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
     Rect r = cv::boundingRect(contour);
     Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2));
     Point centerPoint(r.x + r.width/2, r.y+r.height/2);
-//    for(int i=0; i<centerPoint.rows();i++){
-//        for(int j=0; j<centerPoint.cols();j++){
-//        double distance= matchShapes(centerPoint(0,0),centerPoint(0,1), CV_CONTOURS_MATCH_I1,0)
-//        cout<<distance;
-//        }
-//
-//    }
-
-
-    // cv::Point A(r.x,r.y);
-	// cv::Point B(r.x+r.width,r.y);
-	// cv::Point C(r.x+r.width,r.y+r.height);
-	// cv::Point D(r.x,r.y+r.height);
-
-	// circle(im, A, 5, Scalar(255), 2, 8, 0);
-	// circle(im, B, 5, Scalar(255), 2, 8, 0);
-	// circle(im, C, 5, Scalar(255), 2, 8, 0);
-	// circle(im, D, 5, Scalar(255), 2, 8, 0);
 
      circle(im, centerPoint, 5, Scalar(255), 2, 8, 0);
-
 //    cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), CV_FILLED);
 //    cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
 }
 
 int main() {
 
-Mat image, gray, blurImage, edgeCanny, drawing, zeros, dilate,dilate2, erode, M_Closing;
+Mat image, gray, blurImage, edgeCanny, drawing, zeros, M_Closing;
 Size kernel(5,5);
 
 VideoCapture cap(0);
