@@ -1,10 +1,10 @@
 CC = g++
 CFLAGS = -g -Wall
 RM= rm -f
-SRCS = findcontour.cpp
-PROG = findcontour
+SRCS = main.cpp
+PROG = main
 
-OPENCV = `pkg-config opencv --cflags --libs`
+OPENCV = `pkg-config --cflags --libs opencv`
 LIBS = $(OPENCV)
 
 $(PROG):$(SRCS)
