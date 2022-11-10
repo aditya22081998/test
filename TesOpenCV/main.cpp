@@ -1,49 +1,63 @@
-#include "opencv2/core/utility.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <cmath>
-#include <math.h>
-#include <stdio.h>
+#include <opencv2/opencv.hpp>
 #include <iostream>
-#include <vector>
-#include <time.h>
-#include <bits/stdc++.h>
+#include <stdio.h>
+#include <chrono>
+#include <ctime>
 #include <string>
+#include <vector>
 #include <boost/lexical_cast.hpp>
 
 
 using namespace cv;
 using namespace std;
 
-static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
-{
-    double dx1 = pt1.x - pt0.x;
-    double dy1 = pt1.y - pt0.y;
-    double dx2 = pt2.x - pt0.x;
-    double dy2 = pt2.y - pt0.y;
-    return (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
+
+static double get_distance(double width_object){
+    double known_width=20;
+    double focal_lenght=715.0;
+    double distance_object=(known_width*focal_lenght)/width_object;
+    return distance_object;
 }
 
-static double focal_length_find(double measure_distance, double real_width,double frame_width){
-    double  focal_length = (frame_width*measure_distance)/real_width;
-    return focal_length;
+void setLabel_Distance(Mat& image, double distance){
+    int fontface= FONT_HERSHEY_SIMPLEX;
+    double scale=0.4;
+    int thickness=1;
+
+    string distance_text= to_string(distance);
+
+    Point bawah_kanan(500,460);
+    putText(image,distance_text,bawah_kanan,fontface,scale,CV_RGB(255,255,255),thickness,8);
+    putText(image,"Distance: ", Point(400,460),fontface,scale, CV_RGB(255,255,255),thickness,LINE_8);
+
 }
 
-static double distance_find(double Focal_Length, double real_width_object,double frame_width_object){
-    double  distance = (real_width_object*Focal_Length)/frame_width_object;
-    return distance;
+void setLabel_FPS(Mat& image, double fps){
+    int fontface= FONT_HERSHEY_SIMPLEX;
+    double scale=0.4;
+    int thickness=1;
+
+    string fps_var=to_string(fps);
+
+    Point atas(40,460);
+    putText(image,fps_var,atas,fontface,scale,CV_RGB(255,255,255),thickness,8);
+    putText(image,"FPS: ", Point(1,460),fontface,scale, CV_RGB(255,255,255),thickness,LINE_8);
 }
 
-static double euclideanDist(cv::Point a, cv::Point b)
-{
-    cv::Point diff = a - b;
-    return cv::sqrt(diff.x*diff.x + diff.y*diff.y);
+static double angle(Point pt1, Point pt2, Point pt0){
+    double dx1=pt1.x-pt0.x;
+    double dx2=pt2.x-pt0.x;
+    double dy1=pt1.y-pt0.y;
+    double dy2=pt2.y-pt0.y;
+
+    double distance= (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
+
+    return(distance);
 }
-
-
 
 void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& contour)
 {
@@ -55,8 +69,8 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 //    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
     Rect r = cv::boundingRect(contour);
     Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
-    double distance = euclideanDist(centerPoint);
-    cout << distance;
+//    double distance = euclideanDist(centerPoint);
+//    cout << distance;
 
     string center= boost::lexical_cast<string>(centerPoint);
 //    int centerP=(int)center;
@@ -91,115 +105,124 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
     cv::putText(im, center, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
 }
 
-int main() {
 
-    Mat image, gray, blurImage, edgeCanny, drawing, zeros, M_Closing;
-    Size kernel(5,5);
+int main(){
+    Mat frame;
+    VideoCapture capture("video1.mp4");
 
-    double known_distance=50;
+    int fpsCamera=30;
+    int fpsCapture=10;
 
-    double known_width= 25;
+    double fps2=capture.get(CAP_PROP_FPS);
+    cout<<"FPS2:"<<fps2<<endl;
 
-    VideoCapture cap("video1.mp4");
 
-    cap.set (CAP_PROP_FPS, 10);
-
-    double fps = cap.get(CAP_PROP_FPS);
-
-    cout << "Frames per second using video.get(PROP_FPS) : " << fps << endl;
-
-    cap.set(CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(CAP_PROP_FRAME_HEIGHT, 480);
-
-    if (!cap.isOpened()){
-
-        cout << "cannot open camera";
-
+    if (capture.isOpened()== false) {
+        cout << "ERROR! Unable to open camera\n";
+        cin.get();
+        return -1;
     }
+    chrono::time_point<chrono::high_resolution_clock>
+            prev_frame_time(chrono::high_resolution_clock::now());
+    chrono::time_point<chrono::high_resolution_clock>
+            new_frame_time;
 
-    while (true) {
+    capture.set(CAP_PROP_FRAME_WIDTH,640);
+    capture.set(CAP_PROP_FRAME_HEIGHT,480);
 
-        cap >> image;
-        Mat kernel_identitas= (Mat_<double> (3,3) << 0,0,0,0,1,0,0,0,0);
+    capture.set(CAP_PROP_FPS,30);
+
+    while (true)
+    {
+        Mat Image;
+        capture>>Image;
+        if (Image.empty()) {
+            cout << "ERROR! blank frame \n";
+            cin.get();
+            break;
+        }
+        new_frame_time = chrono::high_resolution_clock::now();
+        chrono::duration<double> duration1(new_frame_time - prev_frame_time);
+        double fps = 1/duration1.count();
+        setLabel_FPS(Image,fps);
+
+        Mat kernel_identitas= (Mat_<double>(3,3)<< 0,0,0,0,1,0,0,0,0);
         Mat image_identitas;
-        filter2D(image,image_identitas,-1,kernel_identitas,Point(-1,-1),0,4);
+        filter2D(Image,image_identitas,-1,kernel_identitas,Point(-1,-1),0,4);
 
-        Mat sharp_image;
-        Mat kernel_sharp= (Mat_<double>(3,3)<< 0,-1,0,-1,5,-1,0,-1,0);
+        Mat imageContrast;
+        image_identitas.convertTo(imageContrast,-1,1.0,-50);
 
-        filter2D(image_identitas, sharp_image, -1, kernel_sharp, Point(-1,-1),0, BORDER_DEFAULT);
+        Mat sharpening_image;
+        Mat kernel_sharpening= (Mat_<double>(3,3)<<0,-1,0,-1,5,-1,0,-1,0);
+        filter2D(imageContrast,sharpening_image,-1,kernel_sharpening,Point(-1,-1),0, 4);
 
-        cvtColor(sharp_image, gray, COLOR_BGR2GRAY);
+        Mat gray;
+        cvtColor(sharpening_image,gray, COLOR_BGR2GRAY);
 
-        GaussianBlur(gray, blurImage, kernel, 0);
+        Mat gaussian_blur;
+        Size kernel(5,5);
+        GaussianBlur(gray , gaussian_blur, kernel, 0);
 
-        morphologyEx(blurImage, M_Closing, MORPH_CLOSE, Mat(), Point(-1,-1), 1, 1, 0  );
+        Mat morph_close;
+        morphologyEx(gaussian_blur,morph_close,MORPH_CLOSE, Mat(),Point(-1,-1),1,1,0);
 
-        Canny(M_Closing, edgeCanny, 40,200);
+        Mat edge_canny;
+        Canny(morph_close,edge_canny,100,200);
 
-        Mat image_copy= edgeCanny.clone();
+        Mat image_copy= edge_canny.clone();
+        vector<vector<Point>>contours;
 
-        std::vector<std::vector<Point> > contours;
+        findContours(image_copy,contours,RETR_EXTERNAL,CHAIN_APPROX_SIMPLE);
 
-        findContours(image_copy, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+        vector<Point>approx;
 
-        std::vector<Point> approx;
+        Mat drawing= Mat::zeros(image_copy.size(),CV_8UC3);
 
-        Mat drawing= Mat::zeros (image_copy.size(), CV_8UC3);
+        for(unsigned int i=0;i<contours.size();i++){
+            double peri= arcLength(Mat(contours[i]),true);
+            approxPolyDP(Mat(contours[i]),approx,peri*0.02, true);
 
-        for (unsigned int i= 0; i<contours.size(); i++){
-            // Approximate contour with accuracy proportional
-            // to the contour perimeter
-            double peri = arcLength(Mat(contours[i]), true);
+            if(std::fabs(contourArea(contours[i]))<100||!isContourConvex(approx))
+            continue;
 
-            cv::approxPolyDP(Mat(contours[i]), approx, peri*0.02, true);
+            if(approx.size()==4){
+                int vtc=approx.size();
 
-            // Skip small or non-convex objects
-            if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
-                continue;
+                vector<double>cos;
+                for(int j=2; j<vtc+1; j++){
+                    cos.push_back(angle(approx[j%vtc],approx[j-2],approx[j-1]));
 
-            if (approx.size() == 4){
-                // Number of vertices of polygonal curve
-                int vtc = approx.size();
-                // Get the degree (in cosines) of all corners
-                std::vector<double> cos;
-                for (int j = 2; j < vtc+1; j++){
-                    cos.push_back(angle(approx[j%vtc], approx[j-2], approx[j-1]));
-//                cout<<distance(approx[j%vtc], approx[j-2], approx[j-1])<<endl;
-                }
+                    std::sort(cos.begin(),cos.end());
 
-                // Sort ascending the corner degree values
-                std::sort(cos.begin(), cos.end());
+                    double mincos= cos.front();
+                    double maxcos= cos.back();
 
-                // Get the lowest and the highest cosine
-                double mincos = cos.front();
-                double maxcos = cos.back();
-
-                // Use the degrees obtained above and the number of vertices
-                // to determine the shape of the contour
-                if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3){
-                    // Detect rectangle or square
-                    Rect r = boundingRect(contours[i]);
-                    double ratio = std::abs(1 - (double)r.width / r.height);
-                    double face_width= r.width;
-                    double FocalLength= focal_length_find(known_distance,known_width,face_width);
-                    if (face_width!=0){
-                        double  Distance_Object= distance_find(FocalLength,known_width,face_width);
-                        cout<< Distance_Object<<endl;
+                    if (vtc==4 && mincos >= -0.1 && maxcos <= 0.3){
+                        Rect r= boundingRect(contours[i]);
+                        double ratio=std::abs(1-(double)r.width/r.height);
+                        cout<<"Width="<< r.width<<endl;
+                        cout<<"Focal Length="<< (r.width*40)/20.0<<endl;
+                        double distance=get_distance(r.width);
+                        setLabel_Distance(drawing, distance);
+                        cout<<"Distance="<<distance<<"Centimeter"<<endl;
+                        setLabel(drawing, ratio<=0.02 ? "Square": "Rectangle",contours[i]);
+                        setLabel_FPS(drawing,fps);
+                        drawContours(drawing,contours,(int)i,Scalar(255),2,LINE_8,approx,0);
                     }
-
-                    setLabel(drawing, ratio <= 0.02 ? "SQUARE" : "RECTANGLE", contours[i]);
-                    drawContours( drawing, contours, (int)i, Scalar(255), 2, LINE_8, approx, 0 );
                 }
             }
         }
-        imshow("Drawing Rectangle",drawing);
-        imshow("Edge Detection", image_copy);
-        imshow("Sharp Image", sharp_image);
-        if (waitKey(25)== (0x20))
+
+        if (duration1.count()>1/fpsCapture){
+            prev_frame_time=new_frame_time;
+            imshow("Live", imageContrast);
+            imshow("Hasil", drawing);
+        }
+
+        if (waitKey(1000/fpsCamera)%256 == 27)
             break;
     }
-
+    capture.release();
     return 0;
-
 }
