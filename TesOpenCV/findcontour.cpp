@@ -102,13 +102,13 @@ void setLabel(cv::Mat &im, const std::string label, std::vector<cv::Point> &cont
     cv::putText(im, center, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
 }
 
-int main()
+int main(int argc, char** argv)
 {
 
     Mat image, gray, blurImage, edgeCanny, drawing, zeros, dilate, dilate2, erode, M_Closing;
     Size kernel(5, 5);
 
-    Mat cap = imread("square.jpg", IMREAD_COLOR);
+    Mat cap = imread(argv[1], IMREAD_COLOR);
 
 
     while (true)

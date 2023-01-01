@@ -15,6 +15,7 @@
 using namespace cv;
 using namespace std;
 
+Mat Image, gray, drawing, image_copy;
 
 static double get_distance(double width_object){
     double known_width=20;
@@ -33,7 +34,6 @@ void setLabel_Distance(Mat& image, double distance){
     Point bawah_kanan(500,460);
     putText(image,distance_text,bawah_kanan,fontface,scale,CV_RGB(255,255,255),thickness,8);
     putText(image,"Distance: ", Point(400,460),fontface,scale, CV_RGB(255,255,255),thickness,LINE_8);
-
 }
 
 void setLabel_FPS(Mat& image, double fps){
@@ -59,14 +59,12 @@ static double angle(Point pt1, Point pt2, Point pt0){
     return(distance);
 }
 
-void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& contour)
-{
+void set_Label(Mat& im, vector<Point>& contour, std::string label ){
     int fontface = cv::FONT_HERSHEY_SIMPLEX;
     double scale = 0.4;
     int thickness = 1;
     int baseline = 0;
 
-//    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
     Rect r = cv::boundingRect(contour);
     Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
 //    double distance = euclideanDist(centerPoint);
@@ -97,18 +95,68 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
     }
 
 //    string center= to_string(centerPoint);
+    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
+    Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2)-25);
+
+//    circle(im, centerPoint, 5, Scalar(255), 2, 8, 0);
+    cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), FILLED);
+    cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+
+}
+
+void set_pointcenter(Mat& im, vector<Point>& contour){
+    int fontface = cv::FONT_HERSHEY_SIMPLEX;
+    double scale = 0.4;
+    int thickness = 1;
+    int baseline = 0;
+
+//    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
+    Rect r = cv::boundingRect(contour);
+    Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
+//    double distance = euclideanDist(centerPoint);
+//    cout << distance;
+
+    string center= boost::lexical_cast<string>(centerPoint);
+
+
+//    string center= to_string(centerPoint);
     Size text = cv::getTextSize(center, fontface, scale, thickness, &baseline);
     Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2));
 
     circle(im, centerPoint, 5, Scalar(255), 2, 8, 0);
     cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), FILLED);
     cv::putText(im, center, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+
 }
 
+void draw_and_fill_contours(std::vector<std::vector<cv::Point>>& contours,
+                            std::vector<std::vector<cv::Point>>& hull,
+                            std::vector<cv::Vec4i>& hierarchy) {
 
-int main(){
+    cv::Mat contours_result = drawing.clone();
+    cv::Mat fill_contours_result = cv::Mat::zeros(drawing.size(), CV_8UC3);
+
+    for (unsigned int i = 0; i < contours.size(); ++i) {
+        cv::Scalar color = cv::Scalar(0, 0, 255);
+        cv::drawContours(contours_result, contours, i, color, 4, 8, hierarchy, 0, cv::Point());
+    }
+
+//    fillPoly(fill_contours_result, hull, cv::Scalar(255, 255, 255));
+//
+//    Mat close;
+//    morphologyEx(fill_contours_result,close,MORPH_CLOSE, Mat(),Point(-1,-1),1,1,0);
+
+    cv::resizeWindow("Contours Result", 420, 240);
+//    cv::resizeWindow("Fill Contours Result", 320, 240);
+    namedWindow("Contours Result", WINDOW_NORMAL);
+//    namedWindow("Fill Contours Result", WINDOW_NORMAL);
+    cv::imshow("Contours Result",contours_result);
+//    cv::imshow("Fill Contours Result",close);
+}
+
+int main(int argc, char** argv){
     Mat frame;
-    VideoCapture capture("video1.mp4");
+    VideoCapture capture(2);
 
     int fpsCamera=30;
     int fpsCapture=10;
@@ -134,7 +182,7 @@ int main(){
 
     while (true)
     {
-        Mat Image;
+
         capture>>Image;
         if (Image.empty()) {
             cout << "ERROR! blank frame \n";
@@ -146,23 +194,20 @@ int main(){
         double fps = 1/duration1.count();
         setLabel_FPS(Image,fps);
 
-        Mat kernel_identitas= (Mat_<double>(3,3)<< 0,0,0,0,1,0,0,0,0);
-        Mat image_identitas;
-        filter2D(Image,image_identitas,-1,kernel_identitas,Point(-1,-1),0,4);
 
         Mat imageContrast;
-        image_identitas.convertTo(imageContrast,-1,1.0,-50);
+        Image.convertTo(imageContrast,-1,1.0,-50);
 
         Mat sharpening_image;
-        Mat kernel_sharpening= (Mat_<double>(3,3)<<0,-1,0,-1,5,-1,0,-1,0);
+        Mat kernel_sharpening= (Mat_<double>(3,3)<<-1,-1,-1,-1,9,-1,-1,-1,-1);
         filter2D(imageContrast,sharpening_image,-1,kernel_sharpening,Point(-1,-1),0, 4);
 
-        Mat gray;
+
         cvtColor(sharpening_image,gray, COLOR_BGR2GRAY);
 
         Mat gaussian_blur;
         Size kernel(5,5);
-        GaussianBlur(gray , gaussian_blur, kernel, 0);
+        GaussianBlur(gray , gaussian_blur, kernel, 1);
 
         Mat morph_close;
         morphologyEx(gaussian_blur,morph_close,MORPH_CLOSE, Mat(),Point(-1,-1),1,1,0);
@@ -170,21 +215,22 @@ int main(){
         Mat edge_canny;
         Canny(morph_close,edge_canny,100,200);
 
-        Mat image_copy= edge_canny.clone();
+        image_copy= edge_canny.clone();
         vector<vector<Point>>contours;
-
-        findContours(image_copy,contours,RETR_EXTERNAL,CHAIN_APPROX_SIMPLE);
+        std::vector<cv::Vec4i> hierarchy;
+        findContours(image_copy,contours,hierarchy,RETR_EXTERNAL,CHAIN_APPROX_SIMPLE);
 
         vector<Point>approx;
 
-        Mat drawing= Mat::zeros(image_copy.size(),CV_8UC3);
-
-        for(unsigned int i=0;i<contours.size();i++){
+        drawing= Mat::zeros(image_copy.size(),CV_8UC3);
+        std::vector<std::vector<cv::Point>> hull(contours.size());
+        for(size_t  i=0;i<contours.size();i++){
+            cv::convexHull(cv::Mat(contours[i]),hull[i],false);
             double peri= arcLength(Mat(contours[i]),true);
             approxPolyDP(Mat(contours[i]),approx,peri*0.02, true);
 
             if(std::fabs(contourArea(contours[i]))<100||!isContourConvex(approx))
-            continue;
+                continue;
 
             if(approx.size()==4){
                 int vtc=approx.size();
@@ -206,17 +252,23 @@ int main(){
                         double distance=get_distance(r.width);
                         setLabel_Distance(drawing, distance);
                         cout<<"Distance="<<distance<<"Centimeter"<<endl;
-                        setLabel(drawing, ratio<=0.02 ? "Square": "Rectangle",contours[i]);
+                        set_Label(drawing, contours[i],ratio<=0.02 ? "Square": "Rectangle");
                         setLabel_FPS(drawing,fps);
+                        set_pointcenter(drawing, contours[i]);
                         drawContours(drawing,contours,(int)i,Scalar(255),2,LINE_8,approx,0);
                     }
                 }
             }
         }
+        draw_and_fill_contours(contours,hull,hierarchy);
 
         if (duration1.count()>1/fpsCapture){
             prev_frame_time=new_frame_time;
-            imshow("Live", imageContrast);
+            cv::resizeWindow("Live", 420, 240);
+            cv::resizeWindow("Hasil", 420, 240);
+            namedWindow("Live", WINDOW_NORMAL);
+            namedWindow("Hasil", WINDOW_NORMAL);
+            imshow("Live", Image);
             imshow("Hasil", drawing);
         }
 

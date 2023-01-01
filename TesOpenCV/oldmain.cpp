@@ -108,7 +108,7 @@ void setLabel(cv::Mat& im, const std::string label, std::vector<cv::Point>& cont
 
 int main(){
     Mat frame;
-    VideoCapture capture("video1.mp4");
+    VideoCapture capture("outcpp.avi");
 
     int fpsCamera=30;
     int fpsCapture=10;
