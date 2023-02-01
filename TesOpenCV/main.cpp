@@ -49,11 +49,12 @@ void setLabel_FPS(Mat& image, double fps){
 }
 
 static double angle(Point pt1, Point pt2, Point pt0){
+    //cout<<pt0.x<<' '<<pt1.x<<' '<<pt2.x<<endl;
     double dx1=pt1.x-pt0.x;
     double dx2=pt2.x-pt0.x;
     double dy1=pt1.y-pt0.y;
     double dy2=pt2.y-pt0.y;
-
+    //cout <<dx1<<endl;
     double distance= (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
 
     return(distance);
@@ -156,7 +157,7 @@ void draw_and_fill_contours(std::vector<std::vector<cv::Point>>& contours,
 
 int main(int argc, char** argv){
     Mat frame;
-    VideoCapture capture(2);
+    VideoCapture capture(argv[1]);
 
     int fpsCamera=30;
     int fpsCapture=10;
@@ -247,11 +248,11 @@ int main(int argc, char** argv){
                     if (vtc==4 && mincos >= -0.1 && maxcos <= 0.3){
                         Rect r= boundingRect(contours[i]);
                         double ratio=std::abs(1-(double)r.width/r.height);
-                        cout<<"Width="<< r.width<<endl;
-                        cout<<"Focal Length="<< (r.width*40)/20.0<<endl;
+                        //cout<<"Width="<< r.width<<endl;
+                        //cout<<"Focal Length="<< (r.width*40)/20.0<<endl;
                         double distance=get_distance(r.width);
                         setLabel_Distance(drawing, distance);
-                        cout<<"Distance="<<distance<<"Centimeter"<<endl;
+                        //cout<<"Distance="<<distance<<"Centimeter"<<endl;
                         set_Label(drawing, contours[i],ratio<=0.02 ? "Square": "Rectangle");
                         setLabel_FPS(drawing,fps);
                         set_pointcenter(drawing, contours[i]);

@@ -11,6 +11,7 @@
 #include <time.h>
 #include <bits/stdc++.h>
 #include <boost/lexical_cast.hpp>
+#include <opencv2/plot.hpp>
 
 using namespace cv;
 using namespace std;
@@ -36,24 +37,27 @@ void setLabel_Distance(Mat image, double distance){
 }
 
 
-static double angle(cv::Point pt1, cv::Point pt2, cv::Point pt0)
+static double angle( cv::Point pt1, cv::Point pt2, cv::Point pt0)
 {
-    // cout << "X0=" << pt0.x << endl;
-    // cout << "X1=" << pt1.x << endl;
-    // cout << "X2=" << pt2.x << endl;
-    // cout << "Y0=" << pt0.y << endl;
-    // cout << "Y1=" << pt1.y << endl;
-    // cout << "Y2=" << pt2.y << endl;
+     cout << "X0=" << pt0.x << endl;
+     cout << "X1=" << pt1.x << endl;
+     cout << "X2=" << pt2.x << endl;
+     cout << "Y0=" << pt0.y << endl;
+     cout << "Y1=" << pt1.y << endl;
+     cout << "Y2=" << pt2.y << endl;
     // cout << "width=" << pt0.width;
     double dx1 = pt1.x - pt0.x;
-    // cout <<"dx1=" << dx1 << endl;
+    cout <<"dx1=" << dx1 << endl;
     double dy1 = pt1.y - pt0.y;
-    // cout << "dy1=" << dy1 << endl;
+    cout << "dy1=" << dy1 << endl;
     double dx2 = pt2.x - pt0.x;
-    // cout << "dx2=" << dx2 << endl;
+    cout << "dx2=" << dx2 << endl;
     double dy2 = pt2.y - pt0.y;
-    // cout << "dy2=" << dy2 << endl;
-    return (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2));
+    cout << "dy2=" << dy2 << endl;
+//    cout<<(dx1 * dx2 + dy1 * dy2)<<"/"<<sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2)) <<endl;
+    double cos= (dx1 * dx2 + dy1 * dy2) / sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2))+ 1e-10;
+    cout<<"Cosinus="<<cos<<endl;
+    return (cos);
 }
 
 
@@ -153,11 +157,7 @@ int main(int argc, char** argv)
 
             cv::approxPolyDP(Mat(contours[i]), approx, peri * 0.02, true);
 
-            // Skip small or non-convex objects
-            if (std::fabs(contourArea(contours[i])) < 100 || !isContourConvex(approx))
-                continue;
-
-            if (approx.size() == 4)
+            if (approx.size() == 4 && fabs(contourArea(Mat(approx))) > 1000 && isContourConvex(Mat(approx)))
             {
                 // Number of vertices of polygonal curve
                 int vtc = approx.size();
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
                 std::vector<double> cos;
                 for (int j = 2; j < vtc + 1; j++)
                 {
-                    cos.push_back(angle(approx[j % vtc], approx[j - 2], approx[j - 1]));
+                    cos.push_back(angle( approx[j % vtc], approx[j - 2], approx[j - 1]));
                     // cout << approx[j % vtc] << endl
                     //      << approx[j - 2] << endl
                     //      << approx[j - 1] << endl;
@@ -183,9 +183,9 @@ int main(int argc, char** argv)
 
                 // Get the lowest and the highest cosine
                 double mincos = cos.front();
-                // cout<<mincos<<endl;
+                cout<<"mincos="<<mincos<<endl;
                 double maxcos = cos.back();
-                // cout<<maxcos<<endl;
+                cout<<"maxcos="<<maxcos<<endl;
                 // Use the degrees obtained above and the number of vertices
                 // to determine the shape of the contour
                 if (vtc == 4 && mincos >= -0.1 && maxcos <= 0.3)
@@ -193,12 +193,12 @@ int main(int argc, char** argv)
                     // Detect rectangle or square
                     Rect r = boundingRect(contours[i]);
                     // cout<<r;
-//                    cout << r.width << endl;
-//                    cout << r.height << endl;
+//                    cout << "width="<<r.width << endl;
+//                    cout << "height="<<r.height << endl;
                     double ratio = std::abs(1 - (double)r.width / r.height);
 
-                    cout<<"Width="<< r.width<<endl;
-                    cout<<"Focal Length="<< (r.width*40)/20.0<<endl;
+                    //cout<<"Width="<< r.width<<endl;
+                    //cout<<"Focal Length="<< (r.width*40)/20.0<<endl;
                     double distance= get_distance(r.width);
 //                    cout<<"Distance="<<distance<<"Centimeter"<<endl;
                     setLabel_Distance(drawing,distance);
