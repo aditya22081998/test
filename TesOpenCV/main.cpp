@@ -15,7 +15,7 @@
 using namespace cv;
 using namespace std;
 
-Mat Image, gray, drawing, image_copy;
+Mat Video, Image, gray, drawing, image_copy;
 
 static double get_distance(double width_object){
     double known_width=20;
@@ -44,65 +44,66 @@ void setLabel_FPS(Mat& image, double fps){
     string fps_var=to_string(fps);
 
     Point atas(40,460);
-    putText(image,fps_var,atas,fontface,scale,CV_RGB(255,255,255),thickness,8);
     putText(image,"FPS: ", Point(1,460),fontface,scale, CV_RGB(255,255,255),thickness,LINE_8);
+    putText(image,fps_var,atas,fontface,scale,CV_RGB(255,255,255),thickness,8);
 }
 
 static double angle(Point pt1, Point pt2, Point pt0){
-    //cout<<pt0.x<<' '<<pt1.x<<' '<<pt2.x<<endl;
+
     double dx1=pt1.x-pt0.x;
     double dx2=pt2.x-pt0.x;
     double dy1=pt1.y-pt0.y;
     double dy2=pt2.y-pt0.y;
-    //cout <<dx1<<endl;
-    double distance= (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
 
-    return(distance);
+    double cosinus= (dx1*dx2 + dy1*dy2)/sqrt((dx1*dx1 + dy1*dy1)*(dx2*dx2 + dy2*dy2));
+
+    return(cosinus);
 }
 
-void set_Label(Mat& im, vector<Point>& contour, std::string label ){
-    int fontface = cv::FONT_HERSHEY_SIMPLEX;
+void set_Label(Mat& im, vector<Point>& contour, std::string label){
+    int fontface = FONT_HERSHEY_SIMPLEX;
     double scale = 0.4;
     int thickness = 1;
     int baseline = 0;
 
-    Rect r = cv::boundingRect(contour);
-    Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
-//    double distance = euclideanDist(centerPoint);
-//    cout << distance;
+    Rect r = boundingRect(contour);
+//    Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
 
-    string center= boost::lexical_cast<string>(centerPoint);
-//    int centerP=(int)center;
-//    Point_ <int> Point_ (centerPoint);
-//    int centerP= centerPoint;
+//    string center= boost::lexical_cast<string>(centerPoint);
+    Size text = getTextSize(label, fontface, scale, thickness, &baseline);
+    Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2)-25);
+//    circle(im, centerPoint,5,Scalar(255),2,8,0);
+    rectangle(im, pt + Point(0, baseline), pt + Point(text.width, -text.height), CV_RGB(255,255,255), FILLED);
+    putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+}
+
+void set_positionObjek(Mat& im, vector<Point>& contour){
+    int fontface = FONT_HERSHEY_SIMPLEX;
+    double scale = 0.4;
+    int thickness = 1;
+    int baseline = 0;
+
+    Rect r = boundingRect(contour);
+
     string kiri="Kiri";
     string kanan="kanan";
     string tengah="tengah";
     if((r.x + r.width / 2)>0 && (r.x + r.width / 2)<=213){
-        Size teks = cv::getTextSize(kiri, fontface, scale, thickness, &baseline);
+        Size teks = getTextSize(kiri, fontface, scale, thickness, &baseline);
         Point bawah(10, 20 );
-        cv::rectangle(im, bawah + cv::Point(0, baseline), bawah + cv::Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
-        cv::putText(im, kiri, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+        rectangle(im, bawah + cv::Point(0, baseline), bawah + Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
+        putText(im, kiri, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
     } else if((r.x + r.width / 2)>213 && (r.x + r.width / 2)<=426){
-        Size teks = cv::getTextSize(tengah, fontface, scale, thickness, &baseline);
+        Size teks = getTextSize(tengah, fontface, scale, thickness, &baseline);
         Point bawah(10, 20 );
-        cv::rectangle(im, bawah + cv::Point(0, baseline), bawah + cv::Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
-        cv::putText(im, tengah, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+        rectangle(im, bawah + Point(0, baseline), bawah + Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
+        putText(im, tengah, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
     } else if((r.x + r.width / 2)>426 && (r.x + r.width / 2)<=640){
-        Size teks = cv::getTextSize(kanan, fontface, scale, thickness, &baseline);
+        Size teks = getTextSize(kanan, fontface, scale, thickness, &baseline);
         Point bawah(10, 20 );
-        cv::rectangle(im, bawah + cv::Point(0, baseline), bawah + cv::Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
-        cv::putText(im, kanan, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
+        rectangle(im, bawah + Point(0, baseline), bawah + Point(teks.width, -teks.height), CV_RGB(255,255,255), FILLED);
+        putText(im, kanan, bawah, fontface, scale, CV_RGB(0,0,0), thickness, 8);
     }
-
-//    string center= to_string(centerPoint);
-    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
-    Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2)-25);
-
-//    circle(im, centerPoint, 5, Scalar(255), 2, 8, 0);
-    cv::rectangle(im, pt + cv::Point(0, baseline), pt + cv::Point(text.width, -text.height), CV_RGB(255,255,255), FILLED);
-    cv::putText(im, label, pt, fontface, scale, CV_RGB(0,0,0), thickness, 8);
-
 }
 
 void set_pointcenter(Mat& im, vector<Point>& contour){
@@ -111,16 +112,11 @@ void set_pointcenter(Mat& im, vector<Point>& contour){
     int thickness = 1;
     int baseline = 0;
 
-//    Size text = cv::getTextSize(label, fontface, scale, thickness, &baseline);
     Rect r = cv::boundingRect(contour);
     Point centerPoint(r.x + r.width / 2, r.y + r.height / 2);
-//    double distance = euclideanDist(centerPoint);
-//    cout << distance;
 
     string center= boost::lexical_cast<string>(centerPoint);
 
-
-//    string center= to_string(centerPoint);
     Size text = cv::getTextSize(center, fontface, scale, thickness, &baseline);
     Point pt(r.x + ((r.width - text.width) / 2), r.y + ((r.height + text.height) / 2));
 
@@ -130,43 +126,15 @@ void set_pointcenter(Mat& im, vector<Point>& contour){
 
 }
 
-void draw_and_fill_contours(std::vector<std::vector<cv::Point>>& contours,
-                            std::vector<std::vector<cv::Point>>& hull,
-                            std::vector<cv::Vec4i>& hierarchy) {
-
-    cv::Mat contours_result = drawing.clone();
-    cv::Mat fill_contours_result = cv::Mat::zeros(drawing.size(), CV_8UC3);
-
-    for (unsigned int i = 0; i < contours.size(); ++i) {
-        cv::Scalar color = cv::Scalar(0, 0, 255);
-        cv::drawContours(contours_result, contours, i, color, 4, 8, hierarchy, 0, cv::Point());
-    }
-
-//    fillPoly(fill_contours_result, hull, cv::Scalar(255, 255, 255));
-//
-//    Mat close;
-//    morphologyEx(fill_contours_result,close,MORPH_CLOSE, Mat(),Point(-1,-1),1,1,0);
-
-    cv::resizeWindow("Contours Result", 420, 240);
-//    cv::resizeWindow("Fill Contours Result", 320, 240);
-    namedWindow("Contours Result", WINDOW_NORMAL);
-//    namedWindow("Fill Contours Result", WINDOW_NORMAL);
-    cv::imshow("Contours Result",contours_result);
-//    cv::imshow("Fill Contours Result",close);
-}
 
 int main(int argc, char** argv){
-    Mat frame;
-    VideoCapture capture(argv[1]);
+
+    VideoCapture Video(2);
 
     int fpsCamera=30;
     int fpsCapture=10;
 
-    double fps2=capture.get(CAP_PROP_FPS);
-    cout<<"FPS2:"<<fps2<<endl;
-
-
-    if (capture.isOpened()== false) {
+    if (Video.isOpened()== false) {
         cout << "ERROR! Unable to open camera\n";
         cin.get();
         return -1;
@@ -176,15 +144,15 @@ int main(int argc, char** argv){
     chrono::time_point<chrono::high_resolution_clock>
             new_frame_time;
 
-    capture.set(CAP_PROP_FRAME_WIDTH,640);
-    capture.set(CAP_PROP_FRAME_HEIGHT,480);
+    Video.set(CAP_PROP_FRAME_WIDTH,640);
+    Video.set(CAP_PROP_FRAME_HEIGHT,480);
 
-    capture.set(CAP_PROP_FPS,30);
+    Video.set(CAP_PROP_FPS,30);
 
     while (true)
     {
 
-        capture>>Image;
+        Video>>Image;
         if (Image.empty()) {
             cout << "ERROR! blank frame \n";
             cin.get();
@@ -195,14 +163,12 @@ int main(int argc, char** argv){
         double fps = 1/duration1.count();
         setLabel_FPS(Image,fps);
 
-
         Mat imageContrast;
         Image.convertTo(imageContrast,-1,1.0,-50);
 
         Mat sharpening_image;
         Mat kernel_sharpening= (Mat_<double>(3,3)<<-1,-1,-1,-1,9,-1,-1,-1,-1);
         filter2D(imageContrast,sharpening_image,-1,kernel_sharpening,Point(-1,-1),0, 4);
-
 
         cvtColor(sharpening_image,gray, COLOR_BGR2GRAY);
 
@@ -214,19 +180,16 @@ int main(int argc, char** argv){
         morphologyEx(gaussian_blur,morph_close,MORPH_CLOSE, Mat(),Point(-1,-1),1,1,0);
 
         Mat edge_canny;
-        Canny(morph_close,edge_canny,100,200);
+        Canny(morph_close,edge_canny,120,250);
 
         image_copy= edge_canny.clone();
         vector<vector<Point>>contours;
-        std::vector<cv::Vec4i> hierarchy;
+        std::vector<Vec4i> hierarchy;
         findContours(image_copy,contours,hierarchy,RETR_EXTERNAL,CHAIN_APPROX_SIMPLE);
 
         vector<Point>approx;
-
         drawing= Mat::zeros(image_copy.size(),CV_8UC3);
-        std::vector<std::vector<cv::Point>> hull(contours.size());
         for(size_t  i=0;i<contours.size();i++){
-            cv::convexHull(cv::Mat(contours[i]),hull[i],false);
             double peri= arcLength(Mat(contours[i]),true);
             approxPolyDP(Mat(contours[i]),approx,peri*0.02, true);
 
@@ -254,6 +217,7 @@ int main(int argc, char** argv){
                         setLabel_Distance(drawing, distance);
                         //cout<<"Distance="<<distance<<"Centimeter"<<endl;
                         set_Label(drawing, contours[i],ratio<=0.02 ? "Square": "Rectangle");
+                        set_positionObjek(drawing, contours[i]);
                         setLabel_FPS(drawing,fps);
                         set_pointcenter(drawing, contours[i]);
                         drawContours(drawing,contours,(int)i,Scalar(255),2,LINE_8,approx,0);
@@ -261,12 +225,11 @@ int main(int argc, char** argv){
                 }
             }
         }
-        draw_and_fill_contours(contours,hull,hierarchy);
 
         if (duration1.count()>1/fpsCapture){
             prev_frame_time=new_frame_time;
-            cv::resizeWindow("Live", 420, 240);
-            cv::resizeWindow("Hasil", 420, 240);
+            cv::resizeWindow("Live", 640, 360);
+            cv::resizeWindow("Hasil", 640, 360);
             namedWindow("Live", WINDOW_NORMAL);
             namedWindow("Hasil", WINDOW_NORMAL);
             imshow("Live", Image);
@@ -276,6 +239,6 @@ int main(int argc, char** argv){
         if (waitKey(1000/fpsCamera)%256 == 27)
             break;
     }
-    capture.release();
+    Image.release();
     return 0;
 }

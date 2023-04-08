@@ -214,7 +214,7 @@ int main(int argc, char** argv)
         cv::resizeWindow("Image", 320, 240);
         namedWindow("Display frame", WINDOW_NORMAL);
         namedWindow("Image", WINDOW_NORMAL);
-        imshow("Display frame", drawing);
+        imshow("Display frame", edge_canny);
         imshow("Image", cap);
         if (waitKey(25)== (27))
             break;
